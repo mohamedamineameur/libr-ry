@@ -30,6 +30,9 @@ public class UserEntity {
     private boolean isActive;
     @Column(name = "is_admin")
     private boolean isAdmin;
+
+    protected UserEntity() {
+    }
     
     public UserEntity(String name, String email, String password) {
         this.name = name;

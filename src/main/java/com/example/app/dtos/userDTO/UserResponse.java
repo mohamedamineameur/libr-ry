@@ -1,5 +1,6 @@
 package com.example.app.dtos.userDTO;
 
+import com.example.app.models.UserModel;
 import java.util.UUID;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
@@ -12,6 +13,18 @@ public class UserResponse {
     private String updatedAt;
     private boolean isActive;
     private boolean isAdmin;
+
+    public UserResponse(UserModel user) {
+        this.id = user.getId();
+        this.name = user.getName();
+        this.email = user.getEmail();
+        this.createdAt = user.getCreatedAt();
+        this.updatedAt = user.getUpdatedAt();
+        this.isActive = user.getIsActive();
+        this.isAdmin = user.getIsAdmin();
+    }
+
+
     public UUID getId() {
         return id;
     }
