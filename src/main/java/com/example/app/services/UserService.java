@@ -5,9 +5,6 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.lang.NonNull;
@@ -15,8 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import com.example.app.models.UserModel;
 import com.example.app.repositories.UserRepository;
@@ -29,6 +24,7 @@ import com.example.app.dtos.userDTO.ChangePasswordRequest;
 import com.example.app.dtos.userDTO.LoginRequest;
 import com.example.app.exceptions.BusinessException;
 import com.example.app.exceptions.NotFoundException;
+import com.example.app.security.ResourceAuthorizationService;
 
 @Service
 @Transactional
@@ -38,17 +34,20 @@ public class UserService {
     private final MessageSource messageSource;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final TokenService tokenService;
+    private final ResourceAuthorizationService resourceAuthorizationService;
 
     public UserService(
         UserRepository userRepository,
         MessageSource messageSource,
         BCryptPasswordEncoder bCryptPasswordEncoder,
-        TokenService tokenService
+        TokenService tokenService,
+        ResourceAuthorizationService resourceAuthorizationService
     ) {
         this.userRepository = userRepository;
         this.messageSource = messageSource;
         this.bCryptPasswordEncoder = bCryptPasswordEncoder;
         this.tokenService = tokenService;
+        this.resourceAuthorizationService = resourceAuthorizationService;
     }
 
     //create user and verify if the user already exists by email and if the password and confirm password are the same
@@ -76,6 +75,11 @@ public class UserService {
 
     //update user and verify if the user exists by id
     public UserResponse updateUser(UpdateUserRequest updateUserRequest) {
+        if (updateUserRequest.getId() == null) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "MISSING_USER_ID", "User id is required");
+        }
+        resourceAuthorizationService.assertOwnerOrAdmin(updateUserRequest.getId());
+
         try {
             UserModel updated = userRepository.updateUser(
                 updateUserRequest.getId(),
@@ -93,6 +97,8 @@ public class UserService {
 
     //change password and verify if the user exists by id and if the old password is correct by comparing hashed passwords
     public UserResponse changePassword(UUID id, ChangePasswordRequest changePasswordRequest) {
+        resourceAuthorizationService.assertOwnerOrAdmin(id);
+
         UserModel user;
         try {
             user = userRepository.findById(id);
@@ -183,38 +189,15 @@ public class UserService {
 
     //me
     public UserResponse getMe() {
-        UUID id = extractUserIdFromCookie();
+        UUID id = resourceAuthorizationService.currentUserId();
         UserModel user = userRepository.me(id);
         return new UserResponse(user);
     }
 
-    private UUID extractUserIdFromCookie() {
-        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        if (attributes == null) {
-            throw new BusinessException(HttpStatus.UNAUTHORIZED, "MISSING_REQUEST_CONTEXT", "Missing request context");
-        }
-
-        HttpServletRequest request = attributes.getRequest();
-        Cookie[] cookies = request.getCookies();
-        if (cookies == null) {
-            throw new BusinessException(HttpStatus.UNAUTHORIZED, "MISSING_TOKEN_COOKIE", "Missing token cookie");
-        }
-
-        for (Cookie cookie : cookies) {
-            if ("token".equals(cookie.getName())) {
-                String cookieValue = cookie.getValue();
-                if (cookieValue == null || cookieValue.isBlank()) {
-                    throw new BusinessException(HttpStatus.UNAUTHORIZED, "MISSING_TOKEN_COOKIE", "Missing token cookie");
-                }
-                return tokenService.extractUserId(cookieValue);
-            }
-        }
-
-        throw new BusinessException(HttpStatus.UNAUTHORIZED, "MISSING_TOKEN_COOKIE", "Missing token cookie");
-    }
-
     //delete user by id from params without dto and verify if the user exists by id return void
     public void deleteUser(UUID id) {
+        resourceAuthorizationService.assertOwnerOrAdmin(id);
+
         try {
             userRepository.findById(id);
         } catch (RuntimeException e) {

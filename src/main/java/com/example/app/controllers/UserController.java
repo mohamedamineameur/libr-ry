@@ -116,7 +116,6 @@ public class UserController {
 
     @DeleteMapping("/{id}")
     @RequireAuthenticated
-    @RequireAdmin
     @RequireActive
     public ResponseEntity<Void> deleteUser(@PathVariable UUID id) {
         userService.deleteUser(id);

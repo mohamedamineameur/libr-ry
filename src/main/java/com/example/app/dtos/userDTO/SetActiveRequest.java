@@ -1,28 +1,26 @@
 package com.example.app.dtos.userDTO;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.NotNull;
 import java.util.UUID;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = false)
 public class SetActiveRequest {
 
-    @NotBlank(message = "User ID is required")
-    @Pattern(regexp = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", message = "Invalid UUID format")
+    @NotNull(message = "User ID is required")
     private UUID userId;
-    @NotBlank(message = "Active status is required")
-    private boolean isActive;
+    @NotNull(message = "Active status is required")
+    private Boolean isActive;
     public UUID getUserId() {
         return userId;
     }
-    public boolean getIsActive() {
+    public Boolean getIsActive() {
         return isActive;
     }
     public void setUserId(UUID userId) {
         this.userId = userId;
     }
-    public void setIsActive(boolean isActive) {
+    public void setIsActive(Boolean isActive) {
         this.isActive = isActive;
     }
 }
