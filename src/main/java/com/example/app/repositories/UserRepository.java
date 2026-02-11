@@ -8,6 +8,10 @@ public interface UserRepository {
     UserModel findById(UUID id);
     UserModel findByEmail(String email);
     UserModel save(UserModel user);
+    UserModel changePassword(UUID id, String oldPassword, String newPassword, String confirmPassword);
+    UserModel updateUser(UUID id, String name, String email);
+    UserModel setActive(UUID id, boolean isActive);
+    UserModel setAdmin(UUID id, boolean isAdmin);
     List<UserModel> findAll();
     boolean isAdmin(UUID id);
     boolean isActive(UUID id);

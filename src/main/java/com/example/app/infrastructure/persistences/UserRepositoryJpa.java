@@ -14,6 +14,10 @@ public interface UserRepositoryJpa extends JpaRepository<UserEntity, UUID> {
     List<UserEntity> findAll();
     boolean is_admin(UUID id);
     boolean is_active(UUID id);
+    UserEntity changePassword(UUID id, String oldPassword, String newPassword, String confirmPassword);
+    UserEntity updateUser(UUID id, String name, String email);
+    UserEntity setActive(UUID id, boolean isActive);
+    UserEntity setAdmin(UUID id, boolean isAdmin);
     void delete(UUID id);
 }
    
