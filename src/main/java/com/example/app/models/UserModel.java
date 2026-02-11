@@ -50,6 +50,12 @@ public class UserModel {
     public void setPassword(String password) {
         this.password = password;
     }
+    public void setId(UUID id) {
+        this.id = id;
+    }
+    public void setCreatedAt(String createdAt) {
+        this.createdAt = createdAt;
+    }
     public void setUpdatedAt(String updatedAt) {
         this.updatedAt = updatedAt;
     }

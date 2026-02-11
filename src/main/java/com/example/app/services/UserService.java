@@ -37,15 +37,18 @@ public class UserService {
     private final UserRepository userRepository;
     private final MessageSource messageSource;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
+    private final TokenService tokenService;
 
     public UserService(
         UserRepository userRepository,
         MessageSource messageSource,
-        BCryptPasswordEncoder bCryptPasswordEncoder
+        BCryptPasswordEncoder bCryptPasswordEncoder,
+        TokenService tokenService
     ) {
         this.userRepository = userRepository;
         this.messageSource = messageSource;
         this.bCryptPasswordEncoder = bCryptPasswordEncoder;
+        this.tokenService = tokenService;
     }
 
     //create user and verify if the user already exists by email and if the password and confirm password are the same
@@ -151,7 +154,7 @@ public class UserService {
     }
 
     //login and verify if the user exists by email and if the password is correct by comparing hashed passwords and send cookie with JWT token
-    public void login(LoginRequest loginRequest) {
+    public String login(LoginRequest loginRequest) {
         UserModel user;
         try {
             user = userRepository.findByEmail(loginRequest.getEmail());
@@ -169,7 +172,7 @@ public class UserService {
                 message("user.password.incorrect", "Current password is incorrect.")
             );
         }
-        userRepository.login(loginRequest.getEmail(), loginRequest.getPassword());
+        return tokenService.generateToken(user.getId());
     }
 
     //get all users
@@ -194,24 +197,20 @@ public class UserService {
         HttpServletRequest request = attributes.getRequest();
         Cookie[] cookies = request.getCookies();
         if (cookies == null) {
-            throw new BusinessException(HttpStatus.UNAUTHORIZED, "MISSING_ID_COOKIE", "Missing id cookie");
+            throw new BusinessException(HttpStatus.UNAUTHORIZED, "MISSING_TOKEN_COOKIE", "Missing token cookie");
         }
 
         for (Cookie cookie : cookies) {
-            if ("id".equals(cookie.getName())) {
+            if ("token".equals(cookie.getName())) {
                 String cookieValue = cookie.getValue();
                 if (cookieValue == null || cookieValue.isBlank()) {
-                    throw new BusinessException(HttpStatus.UNAUTHORIZED, "MISSING_ID_COOKIE", "Missing id cookie");
+                    throw new BusinessException(HttpStatus.UNAUTHORIZED, "MISSING_TOKEN_COOKIE", "Missing token cookie");
                 }
-                try {
-                    return UUID.fromString(cookieValue);
-                } catch (IllegalArgumentException e) {
-                    throw new BusinessException(HttpStatus.BAD_REQUEST, "INVALID_ID_COOKIE", "Invalid id cookie");
-                }
+                return tokenService.extractUserId(cookieValue);
             }
         }
 
-        throw new BusinessException(HttpStatus.UNAUTHORIZED, "MISSING_ID_COOKIE", "Missing id cookie");
+        throw new BusinessException(HttpStatus.UNAUTHORIZED, "MISSING_TOKEN_COOKIE", "Missing token cookie");
     }
 
     //delete user by id from params without dto and verify if the user exists by id return void

@@ -3,7 +3,9 @@ package com.example.app.controllers;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -23,6 +25,9 @@ import com.example.app.dtos.userDTO.SetActiveRequest;
 import com.example.app.dtos.userDTO.SetAdminRequest;
 import com.example.app.dtos.userDTO.UpdateUserRequest;
 import com.example.app.dtos.userDTO.UserResponse;
+import com.example.app.security.RequireActive;
+import com.example.app.security.RequireAdmin;
+import com.example.app.security.RequireAuthenticated;
 import com.example.app.services.UserService;
 
 import jakarta.validation.Valid;
@@ -44,11 +49,15 @@ public class UserController {
     }
 
     @PutMapping
+    @RequireAuthenticated
+    @RequireActive
     public ResponseEntity<UserResponse> updateUser(@Valid @RequestBody UpdateUserRequest request) {
         return ResponseEntity.ok(userService.updateUser(request));
     }
 
     @PatchMapping("/password/{id}")
+    @RequireAuthenticated
+    @RequireActive
     public ResponseEntity<UserResponse> changePassword(
         @PathVariable UUID id,
         @Valid @RequestBody ChangePasswordRequest request
@@ -57,32 +66,58 @@ public class UserController {
     }
 
     @PatchMapping("/active")
+    @RequireAuthenticated
+    @RequireAdmin
+    @RequireActive
     public ResponseEntity<UserResponse> setActive(@Valid @RequestBody SetActiveRequest request) {
         return ResponseEntity.ok(userService.setActive(request));
     }
 
     @PatchMapping("/admin")
+    @RequireAuthenticated
+    @RequireAdmin
+    @RequireActive
     public ResponseEntity<UserResponse> setAdmin(@Valid @RequestBody SetAdminRequest request) {
         return ResponseEntity.ok(userService.setAdmin(request));
     }
 
     @PostMapping("/login")
+    @SuppressWarnings("null")
     public ResponseEntity<Void> login(@Valid @RequestBody LoginRequest request) {
-        userService.login(request);
-        return ResponseEntity.noContent().build();
+        String token = userService.login(request);
+
+        ResponseCookie idCookie = ResponseCookie.from("token", token)
+            .httpOnly(true)
+            .secure(false)
+            .path("/")
+            .sameSite("Lax")
+            .maxAge(60 * 60 * 24)
+            .build();
+
+        return ResponseEntity.noContent()
+            .header(HttpHeaders.SET_COOKIE, idCookie.toString())
+            .build();
     }
 
     @GetMapping
+    @RequireAuthenticated
+    @RequireAdmin
+    @RequireActive
     public ResponseEntity<List<UserResponse>> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
     }
    
     @GetMapping("/me")
+    @RequireAuthenticated
+    @RequireActive
     public ResponseEntity<UserResponse> getMe() {
         return ResponseEntity.ok(userService.getMe());
     }
 
     @DeleteMapping("/{id}")
+    @RequireAuthenticated
+    @RequireAdmin
+    @RequireActive
     public ResponseEntity<Void> deleteUser(@PathVariable UUID id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();

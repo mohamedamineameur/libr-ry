@@ -7,6 +7,9 @@ public final class UserMapper {
     private UserMapper() {}
     public static UserModel toDomain(UserEntity entity) {
         UserModel model = new UserModel(entity.getName(), entity.getEmail(), entity.getPassword());
+        model.setId(entity.getId());
+        model.setCreatedAt(entity.getCreatedAt() != null ? entity.getCreatedAt().toString() : null);
+        model.setUpdatedAt(entity.getUpdatedAt() != null ? entity.getUpdatedAt().toString() : null);
         model.setIsActive(entity.getIsActive());
         model.setIsAdmin(entity.getIsAdmin());
         return model;
