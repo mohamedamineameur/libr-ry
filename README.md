@@ -334,7 +334,7 @@ Login request:
 ```json
 {
   "email": "john@example.com",
-  "password": "AmAm198905@"
+  "password": "Abcd1234@"
 }
 ```
 
