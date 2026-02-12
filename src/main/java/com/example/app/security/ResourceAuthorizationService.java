@@ -11,6 +11,8 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import com.example.app.exceptions.BusinessException;
+import com.example.app.models.SessionModel;
+import com.example.app.repositories.SessionRepository;
 import com.example.app.repositories.UserRepository;
 import com.example.app.services.TokenService;
 
@@ -18,10 +20,16 @@ import com.example.app.services.TokenService;
 public class ResourceAuthorizationService {
 
     private final UserRepository userRepository;
+    private final SessionRepository sessionRepository;
     private final TokenService tokenService;
 
-    public ResourceAuthorizationService(UserRepository userRepository, TokenService tokenService) {
+    public ResourceAuthorizationService(
+        UserRepository userRepository,
+        SessionRepository sessionRepository,
+        TokenService tokenService
+    ) {
         this.userRepository = userRepository;
+        this.sessionRepository = sessionRepository;
         this.tokenService = tokenService;
     }
 
@@ -38,7 +46,25 @@ public class ResourceAuthorizationService {
         }
 
         String token = readTokenFromCookies(request);
-        return tokenService.extractUserId(token);
+        SessionModel session = requireValidSessionFromToken(token);
+        return session.getUser().getId();
+    }
+
+    public UUID currentSessionId() {
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attributes == null) {
+            throw new BusinessException(HttpStatus.UNAUTHORIZED, "MISSING_REQUEST_CONTEXT", "Missing request context");
+        }
+
+        HttpServletRequest request = attributes.getRequest();
+        Object sessionIdAttr = request.getAttribute(SecurityRequestAttributes.CURRENT_SESSION_ID);
+        if (sessionIdAttr instanceof UUID sessionId) {
+            return sessionId;
+        }
+
+        String token = readTokenFromCookies(request);
+        SessionModel session = requireValidSessionFromToken(token);
+        return session.getId();
     }
 
     public void assertOwnerOrAdmin(UUID targetOwnerId) {
@@ -80,5 +106,23 @@ public class ResourceAuthorizationService {
         }
 
         throw new BusinessException(HttpStatus.UNAUTHORIZED, "MISSING_TOKEN_COOKIE", "Missing token cookie");
+    }
+
+    private SessionModel requireValidSessionFromToken(String token) {
+        UUID sessionId = tokenService.extractSessionId(token);
+        SessionModel session;
+        try {
+            session = sessionRepository.findById(sessionId);
+        } catch (RuntimeException e) {
+            throw new BusinessException(HttpStatus.UNAUTHORIZED, "SESSION_NOT_FOUND", "Session not found");
+        }
+
+        if (!session.getIsActive()) {
+            throw new BusinessException(HttpStatus.UNAUTHORIZED, "SESSION_INACTIVE", "Session is inactive");
+        }
+        if (session.getExpiresAt() == null || java.time.LocalDateTime.now().isAfter(session.getExpiresAt())) {
+            throw new BusinessException(HttpStatus.UNAUTHORIZED, "SESSION_EXPIRED", "Session expired");
+        }
+        return session;
     }
 }

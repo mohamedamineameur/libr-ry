@@ -22,31 +22,50 @@ public class TokenService {
 
     private final String secret;
     private final long expirationSeconds;
+    private final long challengeExpirationSeconds;
     private final Base64.Encoder urlEncoder = Base64.getUrlEncoder().withoutPadding();
     private final Base64.Decoder urlDecoder = Base64.getUrlDecoder();
 
     public TokenService(
         @Value("${token.secret}") String secret,
-        @Value("${token.expiration-seconds:86400}") long expirationSeconds
+        @Value("${token.expiration-seconds:86400}") long expirationSeconds,
+        @Value("${token.challenge-expiration-seconds:300}") long challengeExpirationSeconds
     ) {
         if (secret == null || secret.isBlank()) {
             throw new IllegalStateException("token.secret must be configured");
         }
         this.secret = secret;
         this.expirationSeconds = expirationSeconds;
+        this.challengeExpirationSeconds = challengeExpirationSeconds;
     }
 
-    public String generateToken(UUID userId) {
-        long exp = Instant.now().plusSeconds(expirationSeconds).getEpochSecond();
-        String payload = userId + ":" + exp;
+    public String generateToken(UUID sessionId) {
+        return generateSignedToken(sessionId, expirationSeconds);
+    }
+
+    public String generateLoginChallengeToken(UUID userId) {
+        return generateSignedToken(userId, challengeExpirationSeconds);
+    }
+
+    public UUID extractSessionId(String token) {
+        return extractSignedUuid(token, "session");
+    }
+
+    public UUID extractLoginChallengeUserId(String token) {
+        return extractSignedUuid(token, "login challenge");
+    }
+
+    private String generateSignedToken(UUID id, long seconds) {
+        long exp = Instant.now().plusSeconds(seconds).getEpochSecond();
+        String payload = id + ":" + exp;
         String encodedPayload = urlEncoder.encodeToString(payload.getBytes(StandardCharsets.UTF_8));
         String signature = sign(encodedPayload);
         return encodedPayload + "." + signature;
     }
 
-    public UUID extractUserId(String token) {
+    private UUID extractSignedUuid(String token, String tokenType) {
         if (token == null || token.isBlank()) {
-            throw new BusinessException(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Invalid token");
+            throw new BusinessException(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Invalid " + tokenType + " token");
         }
 
         String[] parts = token.split("\\.");
@@ -77,10 +96,10 @@ public class TokenService {
             throw new BusinessException(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Invalid token payload");
         }
 
-        UUID userId;
+        UUID sessionId;
         long exp;
         try {
-            userId = UUID.fromString(payloadParts[0]);
+            sessionId = UUID.fromString(payloadParts[0]);
             exp = Long.parseLong(payloadParts[1]);
         } catch (IllegalArgumentException e) {
             throw new BusinessException(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Invalid token payload");
@@ -90,7 +109,7 @@ public class TokenService {
             throw new BusinessException(HttpStatus.UNAUTHORIZED, "TOKEN_EXPIRED", "Token expired");
         }
 
-        return userId;
+        return sessionId;
     }
 
     private String sign(String encodedPayload) {

@@ -24,6 +24,7 @@ import com.example.app.dtos.userDTO.LoginRequest;
 import com.example.app.dtos.userDTO.UpdateUserRequest;
 import com.example.app.dtos.userDTO.UserResponse;
 import com.example.app.exceptions.BusinessException;
+import com.example.app.models.SessionModel;
 import com.example.app.models.UserModel;
 import com.example.app.repositories.UserRepository;
 import com.example.app.security.ResourceAuthorizationService;
@@ -44,6 +45,11 @@ class UserServiceTest {
     private TokenService tokenService;
 
     @Mock
+    private SessionService sessionService;
+    @Mock
+    private SecurityService securityService;
+
+    @Mock
     private ResourceAuthorizationService resourceAuthorizationService;
 
     private UserService userService;
@@ -55,6 +61,8 @@ class UserServiceTest {
             messageSource,
             bCryptPasswordEncoder,
             tokenService,
+            sessionService,
+            securityService,
             resourceAuthorizationService
         );
     }
@@ -87,6 +95,7 @@ class UserServiceTest {
         when(userRepository.existsByEmail("test@example.com")).thenReturn(false);
         when(bCryptPasswordEncoder.encode("Aa1@aaaa")).thenReturn("hashed");
         when(userRepository.save(any(UserModel.class))).thenReturn(saved);
+        when(securityService.createForUser(any(UserModel.class))).thenAnswer(invocation -> new com.example.app.models.SecurityModel(invocation.getArgument(0)));
 
         UserResponse response = userService.createUser(request);
 
@@ -106,9 +115,14 @@ class UserServiceTest {
         user.setId(userId);
         when(userRepository.findByEmail("test@example.com")).thenReturn(user);
         when(bCryptPasswordEncoder.matches("plain", "hashed")).thenReturn(true);
-        when(tokenService.generateToken(userId)).thenReturn("token-value");
+        when(securityService.is2FAEnabled(userId)).thenReturn(false);
+        SessionModel session = new SessionModel(user, "127.0.0.1", "ua", "Chrome", "Linux", null, null, null, null, null, null);
+        UUID sessionId = UUID.randomUUID();
+        session.setId(sessionId);
+        when(sessionService.createSession(user, "127.0.0.1", "ua")).thenReturn(session);
+        when(tokenService.generateToken(sessionId)).thenReturn("token-value");
 
-        String token = userService.login(request);
+        String token = userService.login(request, "127.0.0.1", "ua");
 
         assertEquals("token-value", token);
     }

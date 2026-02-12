@@ -25,6 +25,8 @@ import com.example.app.security.ActiveInterceptor;
 import com.example.app.security.AdminInterceptor;
 import com.example.app.security.AuthenticationInterceptor;
 import com.example.app.services.AuthorService;
+import com.example.app.services.SecurityService;
+import com.example.app.services.SessionService;
 import com.example.app.services.TokenService;
 import com.example.app.services.UserService;
 
@@ -54,6 +56,11 @@ class AuthorSecurityIntegrationTest {
     @MockBean
     private TokenService tokenService;
 
+    @MockBean
+    private SessionService sessionService;
+    @MockBean
+    private SecurityService securityService;
+
     @Test
     @DisplayName("Check that reading authors requires authentication")
     void getAuthorsShouldReturnUnauthorizedWhenTokenCookieIsMissing() throws Exception {
@@ -66,7 +73,17 @@ class AuthorSecurityIntegrationTest {
     @DisplayName("Check that reading authors requires active user")
     void getAuthorsShouldReturnForbiddenWhenUserIsInactive() throws Exception {
         UUID userId = UUID.randomUUID();
-        when(tokenService.extractUserId("good-token")).thenReturn(userId);
+        UUID sessionId = UUID.randomUUID();
+        when(tokenService.extractSessionId("good-token")).thenReturn(sessionId);
+        com.example.app.models.UserModel user = new com.example.app.models.UserModel("John", "john@example.com", "hashed");
+        user.setId(userId);
+        com.example.app.models.SessionModel session = new com.example.app.models.SessionModel(
+            user, "127.0.0.1", "ua", "Chrome", "Linux", null, null, null, null, null, null
+        );
+        session.setId(sessionId);
+        session.setIsActive(true);
+        session.setExpiresAt(java.time.LocalDateTime.now().plusMinutes(5));
+        when(sessionService.requireValidSession(sessionId)).thenReturn(session);
         when(userRepository.isActive(userId)).thenReturn(false);
 
         mockMvc.perform(get("/authors").cookie(new jakarta.servlet.http.Cookie("token", "good-token")))
@@ -78,8 +95,19 @@ class AuthorSecurityIntegrationTest {
     @DisplayName("Check that creating authors is forbidden for non-admin users")
     void createAuthorShouldReturnForbiddenWhenUserIsNotAdmin() throws Exception {
         UUID userId = UUID.randomUUID();
-        when(tokenService.extractUserId("good-token")).thenReturn(userId);
+        UUID sessionId = UUID.randomUUID();
+        when(tokenService.extractSessionId("good-token")).thenReturn(sessionId);
+        com.example.app.models.UserModel user = new com.example.app.models.UserModel("John", "john@example.com", "hashed");
+        user.setId(userId);
+        com.example.app.models.SessionModel session = new com.example.app.models.SessionModel(
+            user, "127.0.0.1", "ua", "Chrome", "Linux", null, null, null, null, null, null
+        );
+        session.setId(sessionId);
+        session.setIsActive(true);
+        session.setExpiresAt(java.time.LocalDateTime.now().plusMinutes(5));
+        when(sessionService.requireValidSession(sessionId)).thenReturn(session);
         when(userRepository.isActive(userId)).thenReturn(true);
+        when(securityService.isMailVerified(userId)).thenReturn(true);
         when(userRepository.isAdmin(userId)).thenReturn(false);
 
         mockMvc.perform(post("/authors")

@@ -13,14 +13,17 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 import com.example.app.exceptions.BusinessException;
 import com.example.app.repositories.UserRepository;
+import com.example.app.services.SecurityService;
 
 @Component
 public class ActiveInterceptor implements HandlerInterceptor {
 
     private final UserRepository userRepository;
+    private final SecurityService securityService;
 
-    public ActiveInterceptor(UserRepository userRepository) {
+    public ActiveInterceptor(UserRepository userRepository, SecurityService securityService) {
         this.userRepository = userRepository;
+        this.securityService = securityService;
     }
 
     @Override
@@ -44,6 +47,9 @@ public class ActiveInterceptor implements HandlerInterceptor {
 
         if (!userRepository.isActive(userId)) {
             throw new BusinessException(HttpStatus.FORBIDDEN, "ACCOUNT_INACTIVE", "User account is inactive");
+        }
+        if (!securityService.isMailVerified(userId)) {
+            throw new BusinessException(HttpStatus.FORBIDDEN, "EMAIL_NOT_VERIFIED", "Email is not verified");
         }
 
         return true;

@@ -13,15 +13,19 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import com.example.app.exceptions.BusinessException;
+import com.example.app.models.SessionModel;
+import com.example.app.services.SessionService;
 import com.example.app.services.TokenService;
 
 @Component
 public class AuthenticationInterceptor implements HandlerInterceptor {
 
     private final TokenService tokenService;
+    private final SessionService sessionService;
 
-    public AuthenticationInterceptor(TokenService tokenService) {
+    public AuthenticationInterceptor(TokenService tokenService, SessionService sessionService) {
         this.tokenService = tokenService;
+        this.sessionService = sessionService;
     }
 
     @Override
@@ -43,8 +47,10 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         }
 
         String token = readCookieValue(request, "token");
-        UUID userId = tokenService.extractUserId(token);
-        request.setAttribute(SecurityRequestAttributes.CURRENT_USER_ID, userId);
+        UUID sessionId = tokenService.extractSessionId(token);
+        SessionModel session = sessionService.requireValidSession(sessionId);
+        request.setAttribute(SecurityRequestAttributes.CURRENT_SESSION_ID, session.getId());
+        request.setAttribute(SecurityRequestAttributes.CURRENT_USER_ID, session.getUser().getId());
         return true;
     }
 

@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -41,6 +42,8 @@ import com.example.app.exceptions.BusinessException;
 import com.example.app.exceptions.GlobalExceptionHandler;
 import com.example.app.exceptions.NotFoundException;
 import com.example.app.models.UserModel;
+import com.example.app.services.SessionService;
+import com.example.app.services.SecurityService.VerifyEmailResult;
 import com.example.app.services.UserService;
 
 @ExtendWith(MockitoExtension.class)
@@ -49,6 +52,8 @@ class UserControllerTest {
 
     @Mock
     private UserService userService;
+    @Mock
+    private SessionService sessionService;
 
     private MockMvc mockMvc;
 
@@ -59,7 +64,7 @@ class UserControllerTest {
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true);
 
         mockMvc = MockMvcBuilders
-            .standaloneSetup(new UserController(userService))
+            .standaloneSetup(new UserController(userService, sessionService))
             .setControllerAdvice(new GlobalExceptionHandler())
             .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
             .build();
@@ -200,7 +205,11 @@ class UserControllerTest {
     @Test
     @DisplayName("Check that login sets token cookie when credentials are valid")
     void loginShouldSetTokenCookie() throws Exception {
-        when(userService.login(org.mockito.ArgumentMatchers.any())).thenReturn("token123");
+        when(userService.login(
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.anyString(),
+            org.mockito.ArgumentMatchers.nullable(String.class)
+        )).thenReturn("token123");
 
         mockMvc.perform(post("/users/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -212,6 +221,25 @@ class UserControllerTest {
                     """))
             .andExpect(status().isNoContent())
             .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("token=token123")));
+    }
+
+    @Test
+    @DisplayName("Check that login returns OTP challenge when 2FA is required")
+    void loginShouldReturnAcceptedWhenTwoFactorIsRequired() throws Exception {
+        when(userService.login(any(), anyString(), org.mockito.ArgumentMatchers.nullable(String.class)))
+            .thenReturn("2FA_REQUIRED:challenge-token");
+
+        mockMvc.perform(post("/users/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "email": "a@a.a",
+                      "password": "AmAm198905@"
+                    }
+                    """))
+            .andExpect(status().isAccepted())
+            .andExpect(jsonPath("$.code").value("OTP_REQUIRED"))
+            .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("login_challenge=challenge-token")));
     }
 
     @Test
@@ -232,7 +260,11 @@ class UserControllerTest {
     @Test
     @DisplayName("Check that login returns business error when service rejects credentials")
     void loginShouldReturnBusinessErrorWhenServiceThrows() throws Exception {
-        when(userService.login(any())).thenThrow(new BusinessException(
+        when(userService.login(
+            any(),
+            org.mockito.ArgumentMatchers.anyString(),
+            org.mockito.ArgumentMatchers.nullable(String.class)
+        )).thenThrow(new BusinessException(
             org.springframework.http.HttpStatus.BAD_REQUEST,
             "PASSWORD_INCORRECT",
             "Current password is incorrect."
@@ -248,6 +280,51 @@ class UserControllerTest {
                     """))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.code").value("PASSWORD_INCORRECT"));
+    }
+
+    @Test
+    @DisplayName("Check that login OTP sets auth cookie and clears challenge cookie")
+    void loginOtpShouldSetAuthCookieAndClearChallenge() throws Exception {
+        when(userService.verifyOtpAndLogin(eq("challenge-token"), eq("123456"), anyString(), org.mockito.ArgumentMatchers.nullable(String.class)))
+            .thenReturn("auth-token");
+
+        mockMvc.perform(post("/users/login/otp")
+                .cookie(new jakarta.servlet.http.Cookie("login_challenge", "challenge-token"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "otp": "123456"
+                    }
+                    """))
+            .andExpect(status().isNoContent())
+            .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("token=auth-token")));
+    }
+
+    @Test
+    @DisplayName("Check that verify email returns already verified status when applicable")
+    void verifyEmailShouldReturnAlreadyVerifiedStatus() throws Exception {
+        UUID userId = UUID.randomUUID();
+        when(userService.verifyEmail(eq(userId), eq("raw-token"))).thenReturn(VerifyEmailResult.ALREADY_VERIFIED);
+
+        mockMvc.perform(put("/users/verify-email/{id}", userId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "token": "raw-token"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("already_verified"));
+    }
+
+    @Test
+    @DisplayName("Check that logout revokes current session and clears token cookie")
+    void logoutShouldRevokeSessionAndClearCookie() throws Exception {
+        mockMvc.perform(post("/users/logout"))
+            .andExpect(status().isNoContent())
+            .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("Max-Age=0")));
+
+        verify(sessionService).logoutCurrentSession();
     }
 
     @Test

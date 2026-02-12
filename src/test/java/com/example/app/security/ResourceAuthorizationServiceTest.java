@@ -21,6 +21,9 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import com.example.app.exceptions.BusinessException;
+import com.example.app.models.SessionModel;
+import com.example.app.models.UserModel;
+import com.example.app.repositories.SessionRepository;
 import com.example.app.repositories.UserRepository;
 import com.example.app.services.TokenService;
 
@@ -29,6 +32,8 @@ class ResourceAuthorizationServiceTest {
 
     @Mock
     private UserRepository userRepository;
+    @Mock
+    private SessionRepository sessionRepository;
 
     @Mock
     private TokenService tokenService;
@@ -37,7 +42,7 @@ class ResourceAuthorizationServiceTest {
 
     @BeforeEach
     void setUp() {
-        authorizationService = new ResourceAuthorizationService(userRepository, tokenService);
+        authorizationService = new ResourceAuthorizationService(userRepository, sessionRepository, tokenService);
     }
 
     @AfterEach
@@ -62,10 +67,18 @@ class ResourceAuthorizationServiceTest {
     @DisplayName("Check that current user id falls back to token cookie when attribute is absent")
     void currentUserIdShouldFallbackToTokenCookie() {
         UUID currentUser = UUID.randomUUID();
+        UUID sessionId = UUID.randomUUID();
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setCookies(new Cookie("token", "abc.def"));
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
-        when(tokenService.extractUserId("abc.def")).thenReturn(currentUser);
+        when(tokenService.extractSessionId("abc.def")).thenReturn(sessionId);
+        UserModel user = new UserModel("John", "john@example.com", "hashed");
+        user.setId(currentUser);
+        SessionModel session = new SessionModel(user, "127.0.0.1", "ua", "Chrome", "Linux", null, null, null, null, null, null);
+        session.setId(sessionId);
+        session.setIsActive(true);
+        session.setExpiresAt(java.time.LocalDateTime.now().plusMinutes(5));
+        when(sessionRepository.findById(sessionId)).thenReturn(session);
 
         UUID result = authorizationService.currentUserId();
 

@@ -20,6 +20,9 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.web.method.HandlerMethod;
 
 import com.example.app.exceptions.BusinessException;
+import com.example.app.models.SessionModel;
+import com.example.app.models.UserModel;
+import com.example.app.services.SessionService;
 import com.example.app.services.TokenService;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,6 +30,8 @@ class AuthenticationInterceptorTest {
 
     @Mock
     private TokenService tokenService;
+    @Mock
+    private SessionService sessionService;
 
     static class DummyController {
         @RequireAuthenticated
@@ -40,13 +45,19 @@ class AuthenticationInterceptorTest {
     @Test
     @DisplayName("Check that authenticated routes store current user id in request attributes")
     void shouldSetCurrentUserIdForSecuredHandler() throws Exception {
-        AuthenticationInterceptor interceptor = new AuthenticationInterceptor(tokenService);
+        AuthenticationInterceptor interceptor = new AuthenticationInterceptor(tokenService, sessionService);
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setCookies(new Cookie("token", "abc.def"));
         MockHttpServletResponse response = new MockHttpServletResponse();
         HandlerMethod handler = new HandlerMethod(new DummyController(), "secured");
+        UUID sessionId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
-        when(tokenService.extractUserId("abc.def")).thenReturn(userId);
+        UserModel user = new UserModel("John", "john@example.com", "hashed");
+        user.setId(userId);
+        SessionModel session = new SessionModel(user, "127.0.0.1", "ua", "Chrome", "Linux", null, null, null, null, null, null);
+        session.setId(sessionId);
+        when(tokenService.extractSessionId("abc.def")).thenReturn(sessionId);
+        when(sessionService.requireValidSession(sessionId)).thenReturn(session);
 
         boolean allowed = interceptor.preHandle(request, response, handler);
 
@@ -57,7 +68,7 @@ class AuthenticationInterceptorTest {
     @Test
     @DisplayName("Check that open routes bypass authentication interceptor")
     void shouldSkipAuthenticationForOpenHandler() throws Exception {
-        AuthenticationInterceptor interceptor = new AuthenticationInterceptor(tokenService);
+        AuthenticationInterceptor interceptor = new AuthenticationInterceptor(tokenService, sessionService);
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         HandlerMethod handler = new HandlerMethod(new DummyController(), "open");
@@ -71,7 +82,7 @@ class AuthenticationInterceptorTest {
     @Test
     @DisplayName("Check that secured routes fail when token cookie is missing")
     void shouldFailWhenTokenCookieIsMissingOnSecuredHandler() throws Exception {
-        AuthenticationInterceptor interceptor = new AuthenticationInterceptor(tokenService);
+        AuthenticationInterceptor interceptor = new AuthenticationInterceptor(tokenService, sessionService);
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         HandlerMethod handler = new HandlerMethod(new DummyController(), "secured");

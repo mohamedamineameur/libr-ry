@@ -24,7 +24,9 @@ import com.example.app.dtos.userDTO.ChangePasswordRequest;
 import com.example.app.dtos.userDTO.LoginRequest;
 import com.example.app.exceptions.BusinessException;
 import com.example.app.exceptions.NotFoundException;
+import com.example.app.models.SessionModel;
 import com.example.app.security.ResourceAuthorizationService;
+import com.example.app.services.SecurityService.VerifyEmailResult;
 
 @Service
 @Transactional
@@ -34,6 +36,8 @@ public class UserService {
     private final MessageSource messageSource;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final TokenService tokenService;
+    private final SessionService sessionService;
+    private final SecurityService securityService;
     private final ResourceAuthorizationService resourceAuthorizationService;
 
     public UserService(
@@ -41,12 +45,16 @@ public class UserService {
         MessageSource messageSource,
         BCryptPasswordEncoder bCryptPasswordEncoder,
         TokenService tokenService,
+        SessionService sessionService,
+        SecurityService securityService,
         ResourceAuthorizationService resourceAuthorizationService
     ) {
         this.userRepository = userRepository;
         this.messageSource = messageSource;
         this.bCryptPasswordEncoder = bCryptPasswordEncoder;
         this.tokenService = tokenService;
+        this.sessionService = sessionService;
+        this.securityService = securityService;
         this.resourceAuthorizationService = resourceAuthorizationService;
     }
 
@@ -70,6 +78,8 @@ public class UserService {
 
         UserModel user = new UserModel(createUserRequest.getName(), createUserRequest.getEmail(), bCryptPasswordEncoder.encode(createUserRequest.getPassword()));
         UserModel createdUser = userRepository.save(user);
+        securityService.createForUser(createdUser);
+        securityService.sendEmailVerification(createdUser.getId(), createdUser.getEmail());
         return new UserResponse(createdUser);
     }
 
@@ -160,7 +170,7 @@ public class UserService {
     }
 
     //login and verify if the user exists by email and if the password is correct by comparing hashed passwords and send cookie with JWT token
-    public String login(LoginRequest loginRequest) {
+    public String login(LoginRequest loginRequest, String ipAddress, String userAgent) {
         UserModel user;
         try {
             user = userRepository.findByEmail(loginRequest.getEmail());
@@ -178,7 +188,39 @@ public class UserService {
                 message("user.password.incorrect", "Current password is incorrect.")
             );
         }
-        return tokenService.generateToken(user.getId());
+
+        if (securityService.is2FAEnabled(user.getId())) {
+            securityService.generateAndSendOtp(user.getId(), user.getEmail());
+            return "2FA_REQUIRED:" + tokenService.generateLoginChallengeToken(user.getId());
+        }
+
+        SessionModel session = sessionService.createSession(user, ipAddress, userAgent);
+        return tokenService.generateToken(session.getId());
+    }
+
+    public String verifyOtpAndLogin(String loginChallengeToken, String otp, String ipAddress, String userAgent) {
+        UUID userId = tokenService.extractLoginChallengeUserId(loginChallengeToken);
+        if (!securityService.is2FAEnabled(userId)) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "TWO_FACTOR_NOT_ENABLED", "Two-factor authentication is not enabled");
+        }
+
+        UserModel user;
+        try {
+            user = userRepository.findById(userId);
+        } catch (RuntimeException e) {
+            throw new NotFoundException(
+                "USER_NOT_FOUND",
+                message("user.not.found", "User not found.")
+            );
+        }
+
+        securityService.verifyOtp(userId, otp);
+        SessionModel session = sessionService.createSession(user, ipAddress, userAgent);
+        return tokenService.generateToken(session.getId());
+    }
+
+    public VerifyEmailResult verifyEmail(UUID userId, String token) {
+        return securityService.verifyEmail(userId, token);
     }
 
     //get all users
