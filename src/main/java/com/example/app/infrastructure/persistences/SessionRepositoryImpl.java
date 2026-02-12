@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,8 +52,24 @@ public class SessionRepositoryImpl implements SessionRepository {
     }
 
     @Override
+    public List<SessionModel> findByUserId(UUID userId, int page, int size) {
+        return sessionRepositoryJpa.findByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(page, size))
+            .stream()
+            .map(SessionMapper::toDomain)
+            .collect(Collectors.toList());
+    }
+
+    @Override
     public List<SessionModel> findAll() {
         return sessionRepositoryJpa.findAll()
+            .stream()
+            .map(SessionMapper::toDomain)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<SessionModel> findAll(int page, int size) {
+        return sessionRepositoryJpa.findAll(PageRequest.of(page, size))
             .stream()
             .map(SessionMapper::toDomain)
             .collect(Collectors.toList());

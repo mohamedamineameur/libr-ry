@@ -83,6 +83,30 @@ src/main/java/com/example/app/
 
 ---
 
+## Architecture
+
+The code follows a layered architecture:
+
+- **Controller layer**: HTTP contract + input validation
+- **Service layer**: business logic + authorization orchestration
+- **Repository layer**: domain persistence interfaces
+- **Infrastructure layer**: JPA entities/repositories + external integrations (mail, GeoIP)
+- **Security layer**: interceptors and route-level access annotations
+
+### Diagram
+
+```mermaid
+flowchart TD
+    C[Controller] --> S[Service]
+    S --> R[Domain Repository Interface]
+    R --> P[JPA Persistence Implementation]
+    P --> DB[(PostgreSQL)]
+    S --> SEC[Security / Authorization Service]
+    S --> EXT[Email + GeoIP Integrations]
+```
+
+---
+
 ## Configuration
 
 The app loads `.env` automatically through:
@@ -168,6 +192,13 @@ API default base URL:
 http://localhost:8080
 ```
 
+### OpenAPI / Swagger
+
+After startup:
+
+- OpenAPI JSON: `http://localhost:8080/api-docs`
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
+
 ---
 
 ## Security Pipeline
@@ -224,6 +255,15 @@ Interceptors order:
 
 - `POST /users/logout` revokes current session (`isActive=false`) and clears auth cookie.
 
+### 2FA sequence (quick visual)
+
+```text
+Client -> POST /users/login
+API -> 202 + login_challenge cookie + OTP_REQUIRED
+Client -> POST /users/login/otp (with OTP)
+API -> 204 + token cookie + clear login_challenge
+```
+
 ---
 
 ## API Endpoints (high-level)
@@ -237,6 +277,7 @@ Interceptors order:
 - `POST /users/logout` - logout
 - `GET /users/me` - current user
 - `GET /users` - list users (admin)
+- `GET /users?page=0&size=20` - paginated users list (admin)
 - `PUT /users` - update user
 - `PATCH /users/password/{id}` - change password
 - `PATCH /users/active` - set active (admin)
@@ -251,12 +292,15 @@ Interceptors order:
 ### Sessions (`/sessions`)
 
 - `GET /sessions/me` - own sessions
+- `GET /sessions/me?page=0&size=20` - paginated own sessions
 - `PATCH /sessions/{id}/revoke` - revoke one session (owner/admin)
 - `GET /sessions` - all sessions (admin)
+- `GET /sessions?page=0&size=20` - paginated all sessions (admin)
 
 ### Authors (`/authors`)
 
 - `GET /authors` - authenticated + active
+- `GET /authors?page=0&size=20` - paginated authors list
 - `GET /authors/{id}` - authenticated + active
 - `POST /authors` - admin + active
 - `PUT /authors/{id}` - admin + active
@@ -265,6 +309,7 @@ Interceptors order:
 ### Books (`/books`)
 
 - `GET /books` - authenticated + active
+- `GET /books?page=0&size=20` - paginated books list
 - `GET /books/{id}` - authenticated + active
 - `POST /books` - admin + active
 - `PUT /books/{id}` - admin + active
@@ -274,9 +319,51 @@ Interceptors order:
 
 - `POST /laons` - authenticated + active
 - `GET /laons/me` - authenticated + active (owner scope)
+- `GET /laons/me?page=0&size=20` - paginated own loans
 - `GET /laons/{id}` - authenticated + active (owner/admin)
 - `GET /laons` - admin + active
+- `GET /laons?page=0&size=20` - paginated all loans (admin)
 - `PATCH /laons/{id}/return` - authenticated + active (owner/admin)
+
+---
+
+## JSON Examples
+
+Login request:
+
+```json
+{
+  "email": "john@example.com",
+  "password": "AmAm198905@"
+}
+```
+
+2FA required response:
+
+```json
+{
+  "code": "OTP_REQUIRED",
+  "message": "OTP sent to your email"
+}
+```
+
+Verify OTP request:
+
+```json
+{
+  "otp": "123456"
+}
+```
+
+Create book request:
+
+```json
+{
+  "title": "Clean Architecture",
+  "description": "A guide to software structure and design.",
+  "authorId": "11111111-1111-1111-1111-111111111111"
+}
+```
 
 ---
 
@@ -319,6 +406,31 @@ Includes:
 - controller tests
 - security interceptor tests
 - integration-style MockMvc tests
+
+---
+
+## CI/CD
+
+GitHub Actions workflow is included in `.github/workflows/ci.yml`:
+
+- triggers on push and pull requests
+- sets up Java 21
+- runs `mvn clean verify`
+
+---
+
+## Docker
+
+Production-style containerization files are included:
+
+- `Dockerfile` (multi-stage build)
+- `docker-compose.yml` (API + PostgreSQL + healthcheck)
+
+Run with containers:
+
+```bash
+docker compose up --build -d
+```
 
 ---
 

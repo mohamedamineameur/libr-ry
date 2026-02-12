@@ -2,6 +2,7 @@ package com.example.app.controllers;
 
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -47,7 +48,7 @@ class SessionControllerTest {
         user.setId(UUID.randomUUID());
         SessionModel session = new SessionModel(user, "127.0.0.1", "ua", "Chrome", "Linux", null, null, null, null, null, null);
         SessionResponse response = new SessionResponse(session);
-        when(sessionService.getMySessions()).thenReturn(List.of(response));
+        when(sessionService.getMySessions(anyInt(), anyInt())).thenReturn(List.of(response));
 
         mockMvc.perform(get("/sessions/me"))
             .andExpect(status().isOk());
@@ -56,7 +57,7 @@ class SessionControllerTest {
     @Test
     @DisplayName("Check that admin listing all sessions returns 200")
     void getAllSessionsShouldReturnOk() throws Exception {
-        when(sessionService.getAllSessions()).thenReturn(List.of());
+        when(sessionService.getAllSessions(anyInt(), anyInt())).thenReturn(List.of());
 
         mockMvc.perform(get("/sessions"))
             .andExpect(status().isOk());

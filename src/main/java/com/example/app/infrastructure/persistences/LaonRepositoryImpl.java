@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,6 +47,14 @@ public class LaonRepositoryImpl implements LaonRepository {
     }
 
     @Override
+    public List<LaonModel> findByUserId(UUID userId, int page, int size) {
+        return laonRepositoryJpa.findByUserId(userId, PageRequest.of(page, size))
+            .stream()
+            .map(LaonMapper::toDomain)
+            .collect(Collectors.toList());
+    }
+
+    @Override
     public LaonModel findByBookId(UUID bookId) {
         return LaonMapper.toDomain(
             laonRepositoryJpa.findFirstByBookIdOrderByLoanDateDesc(bookId).orElseThrow(() -> new RuntimeException("Loan not found"))
@@ -78,5 +87,13 @@ public class LaonRepositoryImpl implements LaonRepository {
     @Override
     public List<LaonModel> findAll() {
         return laonRepositoryJpa.findAll().stream().map(LaonMapper::toDomain).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<LaonModel> findAll(int page, int size) {
+        return laonRepositoryJpa.findAll(PageRequest.of(page, size))
+            .stream()
+            .map(LaonMapper::toDomain)
+            .collect(Collectors.toList());
     }
 }

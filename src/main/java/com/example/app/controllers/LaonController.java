@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.app.dtos.laonDTO.CreateLaonRequest;
@@ -52,16 +53,22 @@ public class LaonController {
     @GetMapping("/me")
     @RequireAuthenticated
     @RequireActive
-    public ResponseEntity<List<LaonResponse>> getMine() {
-        return ResponseEntity.ok(laonService.getMine());
+    public ResponseEntity<List<LaonResponse>> getMine(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        return ResponseEntity.ok(laonService.getMine(page, size));
     }
 
     @GetMapping
     @RequireAuthenticated
     @RequireActive
     @RequireAdmin
-    public ResponseEntity<List<LaonResponse>> getAll() {
-        return ResponseEntity.ok(laonService.getAll());
+    public ResponseEntity<List<LaonResponse>> getAll(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        return ResponseEntity.ok(laonService.getAll(page, size));
     }
 
     @PatchMapping("/{id}/return")

@@ -25,6 +25,9 @@ import com.example.app.security.ResourceAuthorizationService;
 @Service
 @Transactional
 public class SessionService {
+    private static final int DEFAULT_PAGE = 0;
+    private static final int DEFAULT_SIZE = 20;
+    private static final int MAX_SIZE = 100;
 
     private final SessionRepository sessionRepository;
     private final ResourceAuthorizationService resourceAuthorizationService;
@@ -89,8 +92,23 @@ public class SessionService {
         return sessionRepository.findByUserId(currentUserId).stream().map(SessionResponse::new).collect(Collectors.toList());
     }
 
+    public List<SessionResponse> getMySessions(int page, int size) {
+        UUID currentUserId = resourceAuthorizationService.currentUserId();
+        return sessionRepository.findByUserId(currentUserId, normalizePage(page), normalizeSize(size))
+            .stream()
+            .map(SessionResponse::new)
+            .collect(Collectors.toList());
+    }
+
     public List<SessionResponse> getAllSessions() {
         return sessionRepository.findAll().stream().map(SessionResponse::new).collect(Collectors.toList());
+    }
+
+    public List<SessionResponse> getAllSessions(int page, int size) {
+        return sessionRepository.findAll(normalizePage(page), normalizeSize(size))
+            .stream()
+            .map(SessionResponse::new)
+            .collect(Collectors.toList());
     }
 
     public void revokeSession(UUID sessionId) {
@@ -109,6 +127,17 @@ public class SessionService {
 
     private boolean isExpired(SessionModel session) {
         return session.getExpiresAt() == null || LocalDateTime.now().isAfter(session.getExpiresAt());
+    }
+
+    private int normalizePage(int page) {
+        return Math.max(page, DEFAULT_PAGE);
+    }
+
+    private int normalizeSize(int size) {
+        if (size <= 0) {
+            return DEFAULT_SIZE;
+        }
+        return Math.min(size, MAX_SIZE);
     }
 
     private String detectBrowser(String userAgent) {

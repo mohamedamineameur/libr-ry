@@ -1,6 +1,7 @@
 package com.example.app.controllers;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -68,7 +69,7 @@ class LaonControllerTest {
     @Test
     @DisplayName("Check that get own loans returns 200")
     void getMineShouldReturnOk() throws Exception {
-        when(laonService.getMine()).thenReturn(List.of(responseFixture()));
+        when(laonService.getMine(anyInt(), anyInt())).thenReturn(List.of(responseFixture()));
 
         mockMvc.perform(get("/laons/me"))
             .andExpect(status().isOk());

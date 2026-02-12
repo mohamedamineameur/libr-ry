@@ -6,6 +6,7 @@ import com.example.app.infrastructure.entities.UserEntity;
 import com.example.app.mappers.UserMapper;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.PageRequest;
 import java.util.UUID;
 import java.util.List;
 import java.time.LocalDateTime;
@@ -41,6 +42,13 @@ public class UserRepositoryImpl implements UserRepository {
     @Override
     public List<UserModel> findAll() {
         return userRepositoryJpa.findAll().stream().map(UserMapper::toDomain).collect(Collectors.toList());
+    }
+    @Override
+    public List<UserModel> findAll(int page, int size) {
+        return userRepositoryJpa.findAll(PageRequest.of(page, size))
+            .stream()
+            .map(UserMapper::toDomain)
+            .collect(Collectors.toList());
     }
     @Override
     public boolean isAdmin(UUID id) {

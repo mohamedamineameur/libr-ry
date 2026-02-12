@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,6 +56,14 @@ public class BookRepositoryImpl implements BookRepository {
     @Override
     public List<BookModel> findAll() {
         return bookRepositoryJpa.findAllByIsDeletedFalse().stream().map(BookMapper::toDomain).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<BookModel> findAll(int page, int size) {
+        return bookRepositoryJpa.findAllByIsDeletedFalse(PageRequest.of(page, size))
+            .stream()
+            .map(BookMapper::toDomain)
+            .collect(Collectors.toList());
     }
 
     @Override

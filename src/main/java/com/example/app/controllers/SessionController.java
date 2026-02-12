@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.app.dtos.sessionDTO.SessionResponse;
@@ -29,8 +30,11 @@ public class SessionController {
 
     @GetMapping("/me")
     @RequireAuthenticated
-    public ResponseEntity<List<SessionResponse>> getMySessions() {
-        return ResponseEntity.ok(sessionService.getMySessions());
+    public ResponseEntity<List<SessionResponse>> getMySessions(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        return ResponseEntity.ok(sessionService.getMySessions(page, size));
     }
 
     @PatchMapping("/{id}/revoke")
@@ -43,7 +47,10 @@ public class SessionController {
     @GetMapping
     @RequireAuthenticated
     @RequireAdmin
-    public ResponseEntity<List<SessionResponse>> getAllSessions() {
-        return ResponseEntity.ok(sessionService.getAllSessions());
+    public ResponseEntity<List<SessionResponse>> getAllSessions(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        return ResponseEntity.ok(sessionService.getAllSessions(page, size));
     }
 }

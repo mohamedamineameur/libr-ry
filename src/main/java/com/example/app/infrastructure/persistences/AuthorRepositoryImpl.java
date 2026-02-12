@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -60,6 +61,14 @@ public class AuthorRepositoryImpl implements AuthorRepository {
     @Override
     public List<AuthorModel> findAll() {
         return authorRepositoryJpa.findAllByIsDeletedFalse().stream().map(AuthorMapper::toDomain).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<AuthorModel> findAll(int page, int size) {
+        return authorRepositoryJpa.findAllByIsDeletedFalse(PageRequest.of(page, size))
+            .stream()
+            .map(AuthorMapper::toDomain)
+            .collect(Collectors.toList());
     }
 
     @Override

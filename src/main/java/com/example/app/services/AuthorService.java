@@ -23,6 +23,9 @@ import com.example.app.repositories.AuthorRepository;
 @Service
 @Transactional
 public class AuthorService {
+    private static final int DEFAULT_PAGE = 0;
+    private static final int DEFAULT_SIZE = 20;
+    private static final int MAX_SIZE = 100;
 
     private final AuthorRepository authorRepository;
     private final MessageSource messageSource;
@@ -76,6 +79,12 @@ public class AuthorService {
         return authorRepository.findAll().stream().map(AuthorResponse::new).collect(Collectors.toList());
     }
 
+    public List<AuthorResponse> getAllAuthors(int page, int size) {
+        int safePage = normalizePage(page);
+        int safeSize = normalizeSize(size);
+        return authorRepository.findAll(safePage, safeSize).stream().map(AuthorResponse::new).collect(Collectors.toList());
+    }
+
     public AuthorResponse getAuthorById(UUID id) {
         return new AuthorResponse(findAuthorDomainById(id));
     }
@@ -94,6 +103,17 @@ public class AuthorService {
                 message("author.not.found", "Author not found.")
             );
         }
+    }
+
+    private int normalizePage(int page) {
+        return Math.max(page, DEFAULT_PAGE);
+    }
+
+    private int normalizeSize(int size) {
+        if (size <= 0) {
+            return DEFAULT_SIZE;
+        }
+        return Math.min(size, MAX_SIZE);
     }
 
     @SuppressWarnings("null")

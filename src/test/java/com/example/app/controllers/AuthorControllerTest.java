@@ -1,6 +1,7 @@
 package com.example.app.controllers;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
@@ -74,7 +75,7 @@ class AuthorControllerTest {
     @DisplayName("Check that get all authors returns 200")
     void getAllAuthorsShouldReturnOk() throws Exception {
         AuthorResponse response = new AuthorResponse(new AuthorModel("Ada", "Lovelace", "ada@history.dev", "First programmer"));
-        when(authorService.getAllAuthors()).thenReturn(List.of(response));
+        when(authorService.getAllAuthors(anyInt(), anyInt())).thenReturn(List.of(response));
 
         mockMvc.perform(get("/authors"))
             .andExpect(status().isOk());

@@ -1,6 +1,7 @@
 package com.example.app.controllers;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
@@ -78,7 +79,7 @@ class BookControllerTest {
         AuthorModel author = new AuthorModel("Ada", "Lovelace", "ada@history.dev", "First programmer");
         author.setId(UUID.randomUUID());
         BookResponse response = new BookResponse(new BookModel("Computing Foundations", "History of computing", author));
-        when(bookService.getAllBooks()).thenReturn(List.of(response));
+        when(bookService.getAllBooks(anyInt(), anyInt())).thenReturn(List.of(response));
 
         mockMvc.perform(get("/books"))
             .andExpect(status().isOk());

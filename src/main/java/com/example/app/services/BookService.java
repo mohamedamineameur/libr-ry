@@ -23,6 +23,9 @@ import com.example.app.repositories.BookRepository;
 @Service
 @Transactional
 public class BookService {
+    private static final int DEFAULT_PAGE = 0;
+    private static final int DEFAULT_SIZE = 20;
+    private static final int MAX_SIZE = 100;
 
     private final BookRepository bookRepository;
     private final AuthorRepository authorRepository;
@@ -66,6 +69,12 @@ public class BookService {
 
     public List<BookResponse> getAllBooks() {
         return bookRepository.findAll().stream().map(BookResponse::new).collect(Collectors.toList());
+    }
+
+    public List<BookResponse> getAllBooks(int page, int size) {
+        int safePage = normalizePage(page);
+        int safeSize = normalizeSize(size);
+        return bookRepository.findAll(safePage, safeSize).stream().map(BookResponse::new).collect(Collectors.toList());
     }
 
     public BookResponse getBookById(UUID id) {
@@ -124,6 +133,17 @@ public class BookService {
                 message("author.not.found", "Author not found.")
             );
         }
+    }
+
+    private int normalizePage(int page) {
+        return Math.max(page, DEFAULT_PAGE);
+    }
+
+    private int normalizeSize(int size) {
+        if (size <= 0) {
+            return DEFAULT_SIZE;
+        }
+        return Math.min(size, MAX_SIZE);
     }
 
     @SuppressWarnings("null")

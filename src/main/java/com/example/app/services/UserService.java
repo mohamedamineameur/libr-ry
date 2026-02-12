@@ -31,6 +31,9 @@ import com.example.app.services.SecurityService.VerifyEmailResult;
 @Service
 @Transactional
 public class UserService {
+    private static final int DEFAULT_PAGE = 0;
+    private static final int DEFAULT_SIZE = 20;
+    private static final int MAX_SIZE = 100;
 
     private final UserRepository userRepository;
     private final MessageSource messageSource;
@@ -238,6 +241,11 @@ public class UserService {
         return users.stream().map(UserResponse::new).collect(Collectors.toList());
     }
 
+    public List<UserResponse> getAllUsers(int page, int size) {
+        List<UserModel> users = userRepository.findAll(normalizePage(page), normalizeSize(size));
+        return users.stream().map(UserResponse::new).collect(Collectors.toList());
+    }
+
     //me
     public UserResponse getMe() {
         UUID id = resourceAuthorizationService.currentUserId();
@@ -259,6 +267,17 @@ public class UserService {
         }
 
         userRepository.delete(id);
+    }
+
+    private int normalizePage(int page) {
+        return Math.max(page, DEFAULT_PAGE);
+    }
+
+    private int normalizeSize(int size) {
+        if (size <= 0) {
+            return DEFAULT_SIZE;
+        }
+        return Math.min(size, MAX_SIZE);
     }
 
     @SuppressWarnings("null")

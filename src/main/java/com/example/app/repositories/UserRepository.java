@@ -16,6 +16,7 @@ public interface UserRepository {
     UserModel me(UUID id);
     void login(String email, String password);
     List<UserModel> findAll();
+    List<UserModel> findAll(int page, int size);
     boolean isAdmin(UUID id);
     boolean isActive(UUID id);
     void delete(UUID id);

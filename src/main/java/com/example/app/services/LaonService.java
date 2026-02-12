@@ -28,6 +28,9 @@ import com.example.app.security.ResourceAuthorizationService;
 @Service
 @Transactional
 public class LaonService {
+    private static final int DEFAULT_PAGE = 0;
+    private static final int DEFAULT_SIZE = 20;
+    private static final int MAX_SIZE = 100;
 
     private final LaonRepository laonRepository;
     private final UserRepository userRepository;
@@ -79,8 +82,23 @@ public class LaonService {
         return laonRepository.findByUserId(currentUserId).stream().map(LaonResponse::new).collect(Collectors.toList());
     }
 
+    public List<LaonResponse> getMine(int page, int size) {
+        UUID currentUserId = resourceAuthorizationService.currentUserId();
+        return laonRepository.findByUserId(currentUserId, normalizePage(page), normalizeSize(size))
+            .stream()
+            .map(LaonResponse::new)
+            .collect(Collectors.toList());
+    }
+
     public List<LaonResponse> getAll() {
         return laonRepository.findAll().stream().map(LaonResponse::new).collect(Collectors.toList());
+    }
+
+    public List<LaonResponse> getAll(int page, int size) {
+        return laonRepository.findAll(normalizePage(page), normalizeSize(size))
+            .stream()
+            .map(LaonResponse::new)
+            .collect(Collectors.toList());
     }
 
     public LaonResponse markReturned(UUID id, MarkLaonReturnedRequest request) {
@@ -139,6 +157,17 @@ public class LaonService {
         } catch (RuntimeException e) {
             return null;
         }
+    }
+
+    private int normalizePage(int page) {
+        return Math.max(page, DEFAULT_PAGE);
+    }
+
+    private int normalizeSize(int size) {
+        if (size <= 0) {
+            return DEFAULT_SIZE;
+        }
+        return Math.min(size, MAX_SIZE);
     }
 
     @SuppressWarnings("null")

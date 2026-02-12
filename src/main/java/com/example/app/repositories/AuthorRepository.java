@@ -18,5 +18,7 @@ public interface AuthorRepository {
 
     List<AuthorModel> findAll();
 
+    List<AuthorModel> findAll(int page, int size);
+
     void delete(UUID id);
 }

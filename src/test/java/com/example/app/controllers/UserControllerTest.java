@@ -1,6 +1,7 @@
 package com.example.app.controllers;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
@@ -343,7 +344,7 @@ class UserControllerTest {
     void getAllUsersShouldReturnOk() throws Exception {
         UserModel model = new UserModel("John", "john@example.com", "hashed");
         UserResponse response = new UserResponse(model);
-        when(userService.getAllUsers()).thenReturn(List.of(response));
+        when(userService.getAllUsers(anyInt(), anyInt())).thenReturn(List.of(response));
 
         mockMvc.perform(get("/users"))
             .andExpect(status().isOk());

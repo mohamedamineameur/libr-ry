@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.app.dtos.authorDTO.AuthorResponse;
@@ -58,8 +59,11 @@ public class AuthorController {
     @GetMapping
     @RequireAuthenticated
     @RequireActive
-    public ResponseEntity<List<AuthorResponse>> getAllAuthors() {
-        return ResponseEntity.ok(authorService.getAllAuthors());
+    public ResponseEntity<List<AuthorResponse>> getAllAuthors(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        return ResponseEntity.ok(authorService.getAllAuthors(page, size));
     }
 
     @GetMapping("/{id}")
