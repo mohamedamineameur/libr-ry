@@ -43,7 +43,7 @@ class BookRepositoryImplTest {
         AuthorEntity authorEntity = new AuthorEntity("Ada", "Lovelace", "ada@history.dev", "First programmer");
         BookEntity persisted = new BookEntity("Computing Foundations", "History of computing", authorEntity);
 
-        when(authorRepositoryJpa.findById(authorId)).thenReturn(Optional.of(authorEntity));
+        when(authorRepositoryJpa.findByIdAndIsDeletedFalse(authorId)).thenReturn(Optional.of(authorEntity));
         when(bookRepositoryJpa.save(any(BookEntity.class))).thenReturn(persisted);
 
         BookModel saved = repository.save(book);
@@ -65,8 +65,8 @@ class BookRepositoryImplTest {
 
         AuthorEntity authorEntity = new AuthorEntity("Ada", "Lovelace", "ada@history.dev", "First programmer");
         BookEntity existing = new BookEntity("Old title", "Old description", authorEntity);
-        when(bookRepositoryJpa.findById(id)).thenReturn(Optional.of(existing));
-        when(authorRepositoryJpa.findById(authorId)).thenReturn(Optional.of(authorEntity));
+        when(bookRepositoryJpa.findByIdAndIsDeletedFalse(id)).thenReturn(Optional.of(existing));
+        when(authorRepositoryJpa.findByIdAndIsDeletedFalse(authorId)).thenReturn(Optional.of(authorEntity));
         when(bookRepositoryJpa.save(existing)).thenReturn(existing);
 
         BookModel updated = repository.update(id, book);

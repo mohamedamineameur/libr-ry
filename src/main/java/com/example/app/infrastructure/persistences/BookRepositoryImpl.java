@@ -29,14 +29,14 @@ public class BookRepositoryImpl implements BookRepository {
     @Override
     public BookModel findById(UUID id) {
         return BookMapper.toDomain(
-            bookRepositoryJpa.findById(id).orElseThrow(() -> new RuntimeException("Book not found"))
+            bookRepositoryJpa.findByIdAndIsDeletedFalse(id).orElseThrow(() -> new RuntimeException("Book not found"))
         );
     }
 
     @Override
     public BookModel save(BookModel book) {
         UUID authorId = book.getAuthor().getId();
-        AuthorEntity authorEntity = authorRepositoryJpa.findById(authorId)
+        AuthorEntity authorEntity = authorRepositoryJpa.findByIdAndIsDeletedFalse(authorId)
             .orElseThrow(() -> new RuntimeException("Author not found"));
         BookEntity entity = BookMapper.toEntity(book, authorEntity);
         return BookMapper.toDomain(bookRepositoryJpa.save(entity));
@@ -44,9 +44,9 @@ public class BookRepositoryImpl implements BookRepository {
 
     @Override
     public BookModel update(UUID id, BookModel book) {
-        BookEntity existing = bookRepositoryJpa.findById(id).orElseThrow(() -> new RuntimeException("Book not found"));
+        BookEntity existing = bookRepositoryJpa.findByIdAndIsDeletedFalse(id).orElseThrow(() -> new RuntimeException("Book not found"));
         UUID authorId = book.getAuthor().getId();
-        AuthorEntity authorEntity = authorRepositoryJpa.findById(authorId)
+        AuthorEntity authorEntity = authorRepositoryJpa.findByIdAndIsDeletedFalse(authorId)
             .orElseThrow(() -> new RuntimeException("Author not found"));
         BookMapper.applyToEntity(book, existing, authorEntity);
         return BookMapper.toDomain(bookRepositoryJpa.save(existing));
@@ -54,11 +54,14 @@ public class BookRepositoryImpl implements BookRepository {
 
     @Override
     public List<BookModel> findAll() {
-        return bookRepositoryJpa.findAll().stream().map(BookMapper::toDomain).collect(Collectors.toList());
+        return bookRepositoryJpa.findAllByIsDeletedFalse().stream().map(BookMapper::toDomain).collect(Collectors.toList());
     }
 
     @Override
     public void delete(UUID id) {
-        bookRepositoryJpa.deleteById(id);
+        BookEntity existing = bookRepositoryJpa.findByIdAndIsDeletedFalse(id)
+            .orElseThrow(() -> new RuntimeException("Book not found"));
+        existing.setIsDeleted(true);
+        bookRepositoryJpa.save(existing);
     }
 }

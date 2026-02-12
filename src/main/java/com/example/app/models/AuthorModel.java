@@ -8,6 +8,7 @@ public class AuthorModel {
     private String lastName;
     private String email;
     private String biography;
+    private boolean isDeleted;
 
     public AuthorModel(String firstName, String lastName, String email, String biography) {
         this.id = UUID.randomUUID();
@@ -15,6 +16,7 @@ public class AuthorModel {
         this.lastName = lastName;
         this.email = email;
         this.biography = biography;
+        this.isDeleted = false;
     }
   
     
@@ -34,6 +36,9 @@ public class AuthorModel {
     public String getBiography() {
         return biography;
     }
+    public boolean getIsDeleted() {
+        return isDeleted;
+    }
     // setters
     public void setFirstName(String firstName) {
         this.firstName = firstName;
@@ -49,6 +54,9 @@ public class AuthorModel {
     }
     public void setId(UUID id) {
         this.id = id;
+    }
+    public void setIsDeleted(boolean isDeleted) {
+        this.isDeleted = isDeleted;
     }
   
 }

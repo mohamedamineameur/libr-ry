@@ -28,6 +28,9 @@ public class AuthorEntity {
     @Column(name = "biography")
     private String biography;
 
+    @Column(name = "is_deleted", nullable = false)
+    private boolean isDeleted;
+
     protected AuthorEntity() {
     }
 
@@ -36,6 +39,7 @@ public class AuthorEntity {
         this.lastName = lastName;
         this.email = email;
         this.biography = biography;
+        this.isDeleted = false;
     }
 
     public UUID getId() {
@@ -58,6 +62,10 @@ public class AuthorEntity {
         return biography;
     }
 
+    public boolean getIsDeleted() {
+        return isDeleted;
+    }
+
     public void setFirstName(String firstName) {
         this.firstName = firstName;
     }
@@ -72,5 +80,9 @@ public class AuthorEntity {
 
     public void setBiography(String biography) {
         this.biography = biography;
+    }
+
+    public void setIsDeleted(boolean isDeleted) {
+        this.isDeleted = isDeleted;
     }
 }

@@ -15,15 +15,18 @@ public final class AuthorMapper {
             entity.getBiography()
         );
         model.setId(entity.getId());
+        model.setIsDeleted(entity.getIsDeleted());
         return model;
     }
 
     public static AuthorEntity toEntity(AuthorModel model) {
-        return new AuthorEntity(
+        AuthorEntity entity = new AuthorEntity(
             model.getFirstName(),
             model.getLastName(),
             model.getEmail(),
             model.getBiography()
         );
+        entity.setIsDeleted(model.getIsDeleted());
+        return entity;
     }
 }

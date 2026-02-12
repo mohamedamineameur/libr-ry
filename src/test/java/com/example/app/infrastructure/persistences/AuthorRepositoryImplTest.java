@@ -29,7 +29,7 @@ class AuthorRepositoryImplTest {
     void findByEmailShouldMapEntityToDomain() {
         AuthorRepositoryImpl repository = new AuthorRepositoryImpl(authorRepositoryJpa);
         AuthorEntity entity = new AuthorEntity("Ada", "Lovelace", "ada@history.dev", "First programmer");
-        when(authorRepositoryJpa.findByEmail("ada@history.dev")).thenReturn(Optional.of(entity));
+        when(authorRepositoryJpa.findByEmailAndIsDeletedFalse("ada@history.dev")).thenReturn(Optional.of(entity));
 
         AuthorModel model = repository.findByEmail("ada@history.dev");
 
@@ -43,7 +43,7 @@ class AuthorRepositoryImplTest {
         AuthorRepositoryImpl repository = new AuthorRepositoryImpl(authorRepositoryJpa);
         UUID id = UUID.randomUUID();
         AuthorEntity entity = new AuthorEntity("Ada", "Lovelace", "ada@history.dev", "First programmer");
-        when(authorRepositoryJpa.findById(id)).thenReturn(Optional.of(entity));
+        when(authorRepositoryJpa.findByIdAndIsDeletedFalse(id)).thenReturn(Optional.of(entity));
         when(authorRepositoryJpa.save(entity)).thenReturn(entity);
 
         AuthorModel updated = repository.update(id, "Grace", "Hopper", "grace@history.dev", "COBOL pioneer");

@@ -26,14 +26,14 @@ public class AuthorRepositoryImpl implements AuthorRepository {
     @Override
     public AuthorModel findById(UUID id) {
         return AuthorMapper.toDomain(
-            authorRepositoryJpa.findById(id).orElseThrow(() -> new RuntimeException("Author not found"))
+            authorRepositoryJpa.findByIdAndIsDeletedFalse(id).orElseThrow(() -> new RuntimeException("Author not found"))
         );
     }
 
     @Override
     public AuthorModel findByEmail(String email) {
         return AuthorMapper.toDomain(
-            authorRepositoryJpa.findByEmail(email).orElseThrow(() -> new RuntimeException("Author not found"))
+            authorRepositoryJpa.findByEmailAndIsDeletedFalse(email).orElseThrow(() -> new RuntimeException("Author not found"))
         );
     }
 
@@ -49,7 +49,7 @@ public class AuthorRepositoryImpl implements AuthorRepository {
 
     @Override
     public AuthorModel update(UUID id, String firstName, String lastName, String email, String biography) {
-        AuthorEntity author = authorRepositoryJpa.findById(id).orElseThrow(() -> new RuntimeException("Author not found"));
+        AuthorEntity author = authorRepositoryJpa.findByIdAndIsDeletedFalse(id).orElseThrow(() -> new RuntimeException("Author not found"));
         author.setFirstName(firstName);
         author.setLastName(lastName);
         author.setEmail(email);
@@ -59,11 +59,14 @@ public class AuthorRepositoryImpl implements AuthorRepository {
 
     @Override
     public List<AuthorModel> findAll() {
-        return authorRepositoryJpa.findAll().stream().map(AuthorMapper::toDomain).collect(Collectors.toList());
+        return authorRepositoryJpa.findAllByIsDeletedFalse().stream().map(AuthorMapper::toDomain).collect(Collectors.toList());
     }
 
     @Override
     public void delete(UUID id) {
-        authorRepositoryJpa.deleteById(id);
+        AuthorEntity author = authorRepositoryJpa.findByIdAndIsDeletedFalse(id)
+            .orElseThrow(() -> new RuntimeException("Author not found"));
+        author.setIsDeleted(true);
+        authorRepositoryJpa.save(author);
     }
 }
