@@ -189,6 +189,15 @@ public class UserService {
             );
         }
 
+        if (!securityService.isMailVerified(user.getId())) {
+            securityService.sendEmailVerification(user.getId(), user.getEmail());
+            throw new BusinessException(
+                HttpStatus.FORBIDDEN,
+                "EMAIL_NOT_VERIFIED",
+                message("user.email.not.verified", "Email is not verified.")
+            );
+        }
+
         if (securityService.is2FAEnabled(user.getId())) {
             securityService.generateAndSendOtp(user.getId(), user.getEmail());
             return "2FA_REQUIRED:" + tokenService.generateLoginChallengeToken(user.getId());

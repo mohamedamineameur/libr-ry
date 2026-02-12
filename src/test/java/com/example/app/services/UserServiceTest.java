@@ -115,6 +115,7 @@ class UserServiceTest {
         user.setId(userId);
         when(userRepository.findByEmail("test@example.com")).thenReturn(user);
         when(bCryptPasswordEncoder.matches("plain", "hashed")).thenReturn(true);
+        when(securityService.isMailVerified(userId)).thenReturn(true);
         when(securityService.is2FAEnabled(userId)).thenReturn(false);
         SessionModel session = new SessionModel(user, "127.0.0.1", "ua", "Chrome", "Linux", null, null, null, null, null, null);
         UUID sessionId = UUID.randomUUID();
@@ -125,6 +126,26 @@ class UserServiceTest {
         String token = userService.login(request, "127.0.0.1", "ua");
 
         assertEquals("token-value", token);
+    }
+
+    @Test
+    @DisplayName("Check that login is forbidden when user email is not verified")
+    void loginShouldFailWhenEmailIsNotVerified() {
+        LoginRequest request = new LoginRequest();
+        request.setEmail("test@example.com");
+        request.setPassword("plain");
+
+        UserModel user = new UserModel("John", "test@example.com", "hashed");
+        UUID userId = UUID.randomUUID();
+        user.setId(userId);
+        when(userRepository.findByEmail("test@example.com")).thenReturn(user);
+        when(bCryptPasswordEncoder.matches("plain", "hashed")).thenReturn(true);
+        when(securityService.isMailVerified(userId)).thenReturn(false);
+
+        BusinessException ex = assertThrows(BusinessException.class, () -> userService.login(request, "127.0.0.1", "ua"));
+
+        assertEquals("EMAIL_NOT_VERIFIED", ex.getCode());
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatus());
     }
 
     @Test
